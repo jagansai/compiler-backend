@@ -41,6 +41,10 @@ Response:
 }
 ```
 
+## Example scripts to run the curl command can be found here.
+   - [src/main/resources/test_cpp_command.ps1](src/main/resources/test_cpp_command.ps1)
+   - [src/main/resources/test_java_command.ps1](src/main/resources/test_cpp_command.ps1)
+
 ## Building and Running
 
 1. Clone the repository
