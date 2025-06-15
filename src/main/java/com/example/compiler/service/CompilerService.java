@@ -25,7 +25,7 @@ import com.example.compiler.model.CompilationResponse;
 @Service
 public class CompilerService {
 
-    private static final int TIMEOUT_SECONDS = 10;
+    private static final int TIMEOUT_SECONDS = 20;
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CompilerService.class);
 
     private final Path workDirectory;
