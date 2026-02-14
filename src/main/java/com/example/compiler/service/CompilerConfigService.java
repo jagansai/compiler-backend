@@ -79,6 +79,18 @@ public class CompilerConfigService {
                     log.debug("Resolved compiler path for {}: {} -> {}", 
                              compiler.getId(), path, resolved);
                 }
+                // Resolve any placeholders in metadata values
+                if (compiler.getMetadata() != null && !compiler.getMetadata().isEmpty()) {
+                    java.util.Map<String, String> resolvedMeta = new java.util.HashMap<>();
+                    for (java.util.Map.Entry<String, String> e : compiler.getMetadata().entrySet()) {
+                        String v = e.getValue();
+                        if (v != null && v.contains("${")) {
+                            v = resolvePropertyPlaceholder(v);
+                        }
+                        resolvedMeta.put(e.getKey(), v);
+                    }
+                    compiler.setMetadata(resolvedMeta);
+                }
             }
         }
     }

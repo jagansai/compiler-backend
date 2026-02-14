@@ -107,9 +107,8 @@ class GlobalExceptionHandlerTest {
         request.setLanguage("java");
         request.setCode("public class Test {}");
         
-        CompilationResponse response = new CompilationResponse();
-        response.setSuccess(true);
-        
+        CompilationResponse response = new CompilationResponse(null, null, null, true);
+
         when(compilerService.compile(any())).thenReturn(response);
         
         mockMvc.perform(post("/api/compiler/compile")

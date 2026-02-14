@@ -19,12 +19,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doReturn;
+import com.example.compiler.model.LanguageConfig;
+import com.example.compiler.model.CompilerInfo;
+import java.nio.file.Files;
+import java.util.concurrent.atomic.AtomicReference;
 
 class CompilerServiceTest {
 
     private CompilerPluginRegistry pluginRegistry;
     private CompilerPlugin mockPlugin;
     private CompilerConfig config;
+    private CompilerConfigService compilerConfigService;
     private CompilerService compilerService;
 
     @BeforeEach
@@ -33,13 +38,7 @@ class CompilerServiceTest {
         config = new CompilerConfig();
         config.setTimeoutSeconds(20);
         config.setMaxCodeSize(100000);
-        
-        CompilerConfig.CppConfig cppConfig = new CompilerConfig.CppConfig();
-        cppConfig.setPreferredCompiler("");
-        cppConfig.setMsvcPaths(Arrays.asList());
-        cppConfig.setVswherePath("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe");
-        cppConfig.setVcvarsPath("");
-        config.setCpp(cppConfig);
+        // C++-specific settings are provided via compiler-config.json or environment in tests
         
         // Create mock plugin with doReturn for array methods
         mockPlugin = Mockito.mock(CompilerPlugin.class);
@@ -50,8 +49,27 @@ class CompilerServiceTest {
         // Create real registry with mock plugin
         List<CompilerPlugin> plugins = Arrays.asList(mockPlugin);
         pluginRegistry = new CompilerPluginRegistry(plugins);
-        
-        compilerService = new CompilerService(pluginRegistry, config);
+
+        // Create a simple CompilerConfigService stub that returns a LanguageConfig for
+        // "java"
+        LanguageConfig javaLang = new LanguageConfig();
+        javaLang.setId("java");
+        CompilerInfo javacInfo = new CompilerInfo();
+        javacInfo.setId("javac");
+        javacInfo.setName("javac");
+        javacInfo.setPath("javac");
+        javaLang.setCompilers(Arrays.asList(javacInfo));
+
+        compilerConfigService = new CompilerConfigService(null) {
+            @Override
+            public LanguageConfig getLanguageConfig(String languageId) {
+                if ("java".equals(languageId))
+                    return javaLang;
+                return null;
+            }
+        };
+
+        compilerService = new CompilerService(pluginRegistry, config, compilerConfigService);
     }
 
     @Test
@@ -62,6 +80,7 @@ class CompilerServiceTest {
         
         CompilationRequest request = new CompilationRequest();
         request.setLanguage("java");
+        request.setCompilerId("javac");
         request.setCode(code);
         
         when(mockPlugin.createSourceFile(eq(code), any(Path.class))).thenReturn(mockSourceFile);
@@ -71,10 +90,10 @@ class CompilerServiceTest {
             .thenReturn(assemblyOutput);
         
         CompilationResponse response = compilerService.compile(request);
-        
-        assertTrue(response.isSuccess());
-        assertEquals(assemblyOutput, response.getAssemblyOutput());
-        assertNull(response.getError());
+
+        assertTrue(response.success());
+        assertEquals(assemblyOutput, response.assemblyOutput());
+        assertNull(response.error());
         
         verify(mockPlugin).createSourceFile(eq(code), any(Path.class));
         verify(mockPlugin).compile(eq(request), eq(mockSourceFile), eq(20));
@@ -90,6 +109,7 @@ class CompilerServiceTest {
         
         CompilationRequest request = new CompilationRequest();
         request.setLanguage("java");
+        request.setCompilerId("javac");
         request.setCode(code);
         
         when(mockPlugin.createSourceFile(eq(code), any(Path.class))).thenReturn(mockSourceFile);
@@ -97,10 +117,10 @@ class CompilerServiceTest {
             .thenReturn(CompilationResult.failure(errorOutput));
         
         CompilationResponse response = compilerService.compile(request);
-        
-        assertFalse(response.isSuccess());
-        assertEquals(errorOutput, response.getError());
-        assertNull(response.getAssemblyOutput());
+
+        assertFalse(response.success());
+        assertEquals(errorOutput, response.error());
+        assertNull(response.assemblyOutput());
         
         verify(mockPlugin).compile(eq(request), eq(mockSourceFile), anyInt());
         verify(mockPlugin, never()).generateAssembly(any(), any(), anyInt());
@@ -116,16 +136,17 @@ class CompilerServiceTest {
         // Real registry will throw IllegalArgumentException for unsupported language
         // CompilerService catches it and returns as error response
         CompilationResponse response = compilerService.compile(request);
-        
-        assertFalse(response.isSuccess());
-        assertNotNull(response.getError());
-        assertTrue(response.getError().contains("Unsupported language"));
+
+        assertFalse(response.success());
+        assertNotNull(response.error());
+        assertTrue(response.error().contains("Unsupported language"));
     }
 
     @Test
     void testCompilePluginThrowsException() throws Exception {
         CompilationRequest request = new CompilationRequest();
         request.setLanguage("java");  // Changed from cpp to java
+        request.setCompilerId("javac");
         request.setCode("public class Test {}");
         
         Path mockSourceFile = Paths.get("test.java");
@@ -135,12 +156,46 @@ class CompilerServiceTest {
             .thenThrow(new RuntimeException("Compiler not found"));
         
         CompilationResponse response = compilerService.compile(request);
-        
-        assertFalse(response.isSuccess());
-        assertNotNull(response.getError());
-        assertTrue(response.getError().contains("Compiler not found"));
+
+        assertFalse(response.success());
+        assertNotNull(response.error());
+        assertTrue(response.error().contains("Compiler not found"));
         
         verify(mockPlugin).cleanup(mockSourceFile);
+    }
+
+    @Test
+    void testPerRequestDirectoryIsCreatedAndDeleted() throws Exception {
+        String code = "public class Test {}";
+
+        // Arrange: make the mock createSourceFile actually write into the provided dir
+        when(mockPlugin.createSourceFile(anyString(), any(Path.class))).thenAnswer(invocation -> {
+            Path dir = invocation.getArgument(1);
+            Path file = dir.resolve("Test.java");
+            Files.writeString(file, code);
+            return file;
+        });
+
+        when(mockPlugin.compile(any(), any(), anyInt())).thenReturn(CompilationResult.success());
+        when(mockPlugin.generateAssembly(any(), any(), anyInt())).thenReturn("asm");
+
+        CompilationRequest request = new CompilationRequest();
+        request.setLanguage("java");
+        request.setCompilerId("javac");
+        request.setCode(code);
+
+        // Act
+        CompilationResponse response = compilerService.compile(request);
+
+        // Assert
+        assertTrue(response.success());
+
+        verify(mockPlugin).createSourceFile(eq(code), any(Path.class));
+        // Ensure the service's working directory does not contain lingering Test.java
+        // files.
+        Files.walk(compilerService.getWorkDirectory())
+                .filter(p -> p.getFileName().toString().equals("Test.java"))
+                .forEach(p -> fail("Found leftover source file: " + p));
     }
 
     @Test
@@ -148,13 +203,6 @@ class CompilerServiceTest {
         // Create a new config with different timeout
         CompilerConfig customConfig = new CompilerConfig();
         customConfig.setTimeoutSeconds(30);
-        
-        CompilerConfig.CppConfig cppConfig = new CompilerConfig.CppConfig();
-        cppConfig.setPreferredCompiler("");
-        cppConfig.setMsvcPaths(Arrays.asList());
-        cppConfig.setVswherePath("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe");
-        cppConfig.setVcvarsPath("");
-        customConfig.setCpp(cppConfig);
         
         // Create new mock plugin for this test
         CompilerPlugin testPlugin = Mockito.mock(CompilerPlugin.class);
@@ -164,10 +212,29 @@ class CompilerServiceTest {
         
         List<CompilerPlugin> plugins = Arrays.asList(testPlugin);
         CompilerPluginRegistry testRegistry = new CompilerPluginRegistry(plugins);
-        CompilerService serviceWithCustomTimeout = new CompilerService(testRegistry, customConfig);
+        // Create a simple CompilerConfigService stub for the custom registry
+        CompilerConfigService customConfigService = new CompilerConfigService(null) {
+            @Override
+            public LanguageConfig getLanguageConfig(String languageId) {
+                if ("java".equals(languageId)) {
+                    LanguageConfig javaLang = new LanguageConfig();
+                    javaLang.setId("java");
+                    CompilerInfo javacInfo = new CompilerInfo();
+                    javacInfo.setId("javac");
+                    javacInfo.setName("javac");
+                    javacInfo.setPath("javac");
+                    javaLang.setCompilers(Arrays.asList(javacInfo));
+                    return javaLang;
+                }
+                return null;
+            }
+        };
+
+        CompilerService serviceWithCustomTimeout = new CompilerService(testRegistry, customConfig, customConfigService);
         
         CompilationRequest request = new CompilationRequest();
         request.setLanguage("java");
+        request.setCompilerId("javac");
         request.setCode("public class Test {}");
         
         Path mockSourceFile = Paths.get("test.java");
@@ -186,6 +253,7 @@ class CompilerServiceTest {
     void testCleanupCalledEvenOnException() throws Exception {
         CompilationRequest request = new CompilationRequest();
         request.setLanguage("java");  // Changed from cpp to java since only java plugin is registered
+        request.setCompilerId("javac");
         request.setCode("public class Test {}");
         
         Path mockSourceFile = Paths.get("test.java");

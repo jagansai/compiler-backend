@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Comparator;
 
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -62,6 +63,10 @@ public class CompilerService {
         log.info("Created working directory: {}", workDirectory);
     }
 
+    Path getWorkDirectory() {
+        return workDirectory;
+    }
+
     @PreDestroy
     public void cleanup() {
         try {
@@ -85,6 +90,7 @@ public class CompilerService {
                 request.getLanguage(), request.getCompilerId());
 
         Path sourceFile = null;
+        Path requestDir = null;
         CompilerPlugin plugin = null;
 
         try {
@@ -108,8 +114,9 @@ public class CompilerService {
             // Get the appropriate plugin for the language
             plugin = pluginRegistry.getPlugin(request.getLanguage());
 
-            // Create source file using plugin
-            sourceFile = plugin.createSourceFile(request.getCode(), workDirectory);
+            // Create a per-request subdirectory to isolate filenames
+            requestDir = Files.createTempDirectory(workDirectory, "req-" + UUID.randomUUID() + "-");
+            sourceFile = plugin.createSourceFile(request.getCode(), requestDir);
             log.debug("Created source file: {}", sourceFile);
 
             // Compile the code
@@ -117,24 +124,31 @@ public class CompilerService {
 
             if (!compileResult.isSuccess()) {
                 log.error("Compilation failed: {}", compileResult.getErrorOutput());
-                response.setSuccess(false);
-                response.setError(compileResult.getErrorOutput());
-                return response;
+                return new CompilationResponse(null, null, compileResult.getErrorOutput(), false);
             }
 
             // Generate assembly output
             String assemblyOutput = plugin.generateAssembly(request, sourceFile, compilerConfig.getTimeoutSeconds());
-            response.setSuccess(true);
-            response.setAssemblyOutput(assemblyOutput);
+            response = new CompilationResponse(assemblyOutput, null, null, true);
 
         } catch (Exception e) {
             log.error("Error during compilation", e);
-            response.setSuccess(false);
-            response.setError("Error during compilation: " + e.getMessage());
+            response = new CompilationResponse(null, null, "Error during compilation: " + e.getMessage(), false);
         } finally {
             // Clean up generated files using plugin
             if (plugin != null && sourceFile != null) {
                 plugin.cleanup(sourceFile);
+            }
+            // Delete per-request directory if it was created
+            if (requestDir != null && Files.exists(requestDir)) {
+                try {
+                    Files.walk(requestDir)
+                            .sorted(Comparator.reverseOrder())
+                            .map(Path::toFile)
+                            .forEach(File::delete);
+                } catch (IOException e) {
+                    log.warn("Failed to delete request working directory {}", requestDir, e);
+                }
             }
         }
 
@@ -150,6 +164,7 @@ public class CompilerService {
                 request.getLanguage(), request.getCompilerId());
 
         Path sourceFile = null;
+        Path requestDir = null;
         CompilerPlugin plugin = null;
 
         try {
@@ -173,8 +188,9 @@ public class CompilerService {
             // Get the appropriate plugin for the language
             plugin = pluginRegistry.getPlugin(request.getLanguage());
 
-            // Create source file using plugin
-            sourceFile = plugin.createSourceFile(request.getCode(), workDirectory);
+            // Create a per-request subdirectory to isolate filenames
+            requestDir = Files.createTempDirectory(workDirectory, "req-" + UUID.randomUUID() + "-");
+            sourceFile = plugin.createSourceFile(request.getCode(), requestDir);
             log.debug("Created source file for execution: {}", sourceFile);
 
             // Compile the code
@@ -182,24 +198,31 @@ public class CompilerService {
 
             if (!compileResult.isSuccess()) {
                 log.error("Compilation failed during execution: {}", compileResult.getErrorOutput());
-                response.setSuccess(false);
-                response.setError(compileResult.getErrorOutput());
-                return response;
+                return new CompilationResponse(null, null, compileResult.getErrorOutput(), false);
             }
 
             // Execute the code
             String executionOutput = plugin.execute(request, sourceFile, compilerConfig.getTimeoutSeconds());
-            response.setSuccess(true);
-            response.setOutput(executionOutput);
+            response = new CompilationResponse(null, executionOutput, null, true);
 
         } catch (Exception e) {
             log.error("Error during execution", e);
-            response.setSuccess(false);
-            response.setError("Error during execution: " + e.getMessage());
+            response = new CompilationResponse(null, null, "Error during execution: " + e.getMessage(), false);
         } finally {
             // Clean up generated files using plugin
             if (plugin != null && sourceFile != null) {
                 plugin.cleanup(sourceFile);
+            }
+            // Delete per-request directory if it was created
+            if (requestDir != null && Files.exists(requestDir)) {
+                try {
+                    Files.walk(requestDir)
+                            .sorted(Comparator.reverseOrder())
+                            .map(Path::toFile)
+                            .forEach(File::delete);
+                } catch (IOException e) {
+                    log.warn("Failed to delete request working directory {}", requestDir, e);
+                }
             }
         }
 

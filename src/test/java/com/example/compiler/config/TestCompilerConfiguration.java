@@ -15,14 +15,7 @@ public class TestCompilerConfiguration {
         CompilerConfig config = new CompilerConfig();
         config.setTimeoutSeconds(20);
         config.setMaxCodeSize(100000);
-        
-        CompilerConfig.CppConfig cppConfig = new CompilerConfig.CppConfig();
-        cppConfig.setPreferredCompiler("g++");
-        cppConfig.setMsvcPaths(List.of());
-        cppConfig.setVswherePath("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe");
-        cppConfig.setVcvarsPath("");
-        
-        config.setCpp(cppConfig);
+        // C++ details come from compiler-config.json or environment during integration
         
         return config;
     }

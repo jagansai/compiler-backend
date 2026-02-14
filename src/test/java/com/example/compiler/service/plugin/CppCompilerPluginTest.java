@@ -24,14 +24,8 @@ class CppCompilerPluginTest {
     void setUp() {
         // Create real config object instead of mocking
         config = new CompilerConfig();
-        CompilerConfig.CppConfig cppConfig = new CompilerConfig.CppConfig();
-        cppConfig.setPreferredCompiler("");
-        cppConfig.setMsvcPaths(Arrays.asList());
-        cppConfig.setVswherePath("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe");
-        cppConfig.setVcvarsPath("");
-        config.setCpp(cppConfig);
-        
-        plugin = new CppCompilerPlugin(config);
+        // C++-specific settings are provided via compiler-config.json or environment in tests
+        plugin = new CppCompilerPlugin(config, null, null);
     }
 
     @Test
@@ -131,42 +125,27 @@ class CppCompilerPluginTest {
     void testCompileRequestWithSpecificCompiler() {
         CompilationRequest request = new CompilationRequest();
         request.setLanguage("cpp");
-        request.setCompiler("g++");
+        request.setCompilerId("g++");
         request.setCode("int main() { return 0; }");
         
         // This test verifies the plugin accepts the request structure
-        assertNotNull(request.getCompiler());
-        assertEquals("g++", request.getCompiler());
+        assertNotNull(request.getCompilerId());
+        assertEquals("g++", request.getCompilerId());
     }
 
     @Test
     void testPreferredCompilerFromConfig() {
-        // Create a new config with preferred compiler
+        // Just ensure plugin can be constructed with a config
         CompilerConfig testConfig = new CompilerConfig();
-        CompilerConfig.CppConfig cppConfig = new CompilerConfig.CppConfig();
-        cppConfig.setPreferredCompiler("g++");
-        cppConfig.setMsvcPaths(Arrays.asList());
-        cppConfig.setVswherePath("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe");
-        testConfig.setCpp(cppConfig);
-        
-        CppCompilerPlugin configuredPlugin = new CppCompilerPlugin(testConfig);
+        CppCompilerPlugin configuredPlugin = new CppCompilerPlugin(testConfig, null, null);
         assertNotNull(configuredPlugin);
     }
 
     @Test
     void testCustomMsvcPathsFromConfig() {
-        // Create a new config with custom MSVC paths
+        // Construct plugin; MSVC specifics come from env or compiler-config.json in real runs
         CompilerConfig testConfig = new CompilerConfig();
-        CompilerConfig.CppConfig cppConfig = new CompilerConfig.CppConfig();
-        cppConfig.setPreferredCompiler("");
-        cppConfig.setMsvcPaths(Arrays.asList(
-            "D:\\custom\\path\\cl.exe",
-            "C:\\another\\path\\cl.exe"
-        ));
-        cppConfig.setVswherePath("C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe");
-        testConfig.setCpp(cppConfig);
-        
-        CppCompilerPlugin configuredPlugin = new CppCompilerPlugin(testConfig);
+        CppCompilerPlugin configuredPlugin = new CppCompilerPlugin(testConfig, null, null);
         assertNotNull(configuredPlugin);
     }
 }

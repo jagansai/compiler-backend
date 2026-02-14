@@ -7,6 +7,7 @@ public class CompilerInfo {
     private String version;
     private boolean isDefault;
     private String defaultArgs;
+    private java.util.Map<String, String> metadata = new java.util.HashMap<>();
 
     public String getId() {
         return id;
@@ -54,5 +55,13 @@ public class CompilerInfo {
 
     public void setDefaultArgs(String defaultArgs) {
         this.defaultArgs = defaultArgs;
+    }
+
+    public java.util.Map<String, String> getMetadata() {
+        return metadata;
+    }
+
+    public void setMetadata(java.util.Map<String, String> metadata) {
+        this.metadata = metadata;
     }
 }

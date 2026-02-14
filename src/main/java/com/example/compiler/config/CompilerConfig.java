@@ -37,8 +37,6 @@ public class CompilerConfig {
     /**
      * C++ compiler configuration.
      */
-    private CppConfig cpp = new CppConfig();
-    
     public int getTimeoutSeconds() {
         return timeoutSeconds;
     }
@@ -70,70 +68,5 @@ public class CompilerConfig {
     public void setCorsOrigins(String corsOrigins) {
         this.corsOrigins = corsOrigins;
     }
-    
-    public CppConfig getCpp() {
-        return cpp;
-    }
-    
-    public void setCpp(CppConfig cpp) {
-        this.cpp = cpp;
-    }
-    
-    /**
-     * C++ specific configuration.
-     */
-    public static class CppConfig {
-        
-        /**
-         * Preferred C++ compiler (g++ or cl). If not set, auto-detect.
-         */
-        private String preferredCompiler;
-        
-        /**
-         * Custom MSVC paths to try (in addition to standard locations).
-         */
-        private List<String> msvcPaths = new ArrayList<>();
-        
-        /**
-         * Path to vcvars64.bat for MSVC environment setup.
-         */
-        private String vcvarsPath;
-        
-        /**
-         * Path to vswhere.exe for Visual Studio detection.
-         */
-        private String vswherePath = "C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe";
-        
-        public String getPreferredCompiler() {
-            return preferredCompiler;
-        }
-        
-        public void setPreferredCompiler(String preferredCompiler) {
-            this.preferredCompiler = preferredCompiler;
-        }
-        
-        public List<String> getMsvcPaths() {
-            return msvcPaths;
-        }
-        
-        public void setMsvcPaths(List<String> msvcPaths) {
-            this.msvcPaths = msvcPaths;
-        }
-        
-        public String getVcvarsPath() {
-            return vcvarsPath;
-        }
-        
-        public void setVcvarsPath(String vcvarsPath) {
-            this.vcvarsPath = vcvarsPath;
-        }
-        
-        public String getVswherePath() {
-            return vswherePath;
-        }
-        
-        public void setVswherePath(String vswherePath) {
-            this.vswherePath = vswherePath;
-        }
-    }
+    // C++-specific settings are loaded via CompilerConfigService or environment
 }

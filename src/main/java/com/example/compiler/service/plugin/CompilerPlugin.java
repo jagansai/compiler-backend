@@ -24,6 +24,15 @@ public interface CompilerPlugin {
      * @return Default compiler options for this language
      */
     String[] getDefaultCompilerOptions();
+
+    /**
+     * Optional: return default options for a specific compiler id (for multi-compiler languages).
+     * Default implementation delegates to `getDefaultCompilerOptions()` so existing plugins
+     * need not implement this unless they care about the compiler id.
+     */
+    default String[] getDefaultCompilerOptions(String compilerId) {
+        return getDefaultCompilerOptions();
+    }
     
     /**
      * Compile source code to executable/class files.

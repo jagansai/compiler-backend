@@ -15,7 +15,6 @@ import com.example.compiler.service.plugin.CompilerPluginRegistry;
 
 @RestController
 @RequestMapping("/api/compiler")
-@CrossOrigin(origins = "*") // For development only - configure appropriately for production
 public class CompilerController {
 
     @Autowired
@@ -50,10 +49,12 @@ public class CompilerController {
     }
 
     @GetMapping("/options/{language}")
-    public ResponseEntity<String[]> getCompilerOptions(@PathVariable String language) {
+    public ResponseEntity<String[]> getCompilerOptions(@PathVariable String language,
+                                                       @RequestParam(required = false) String compiler) {
         try {
             CompilerPlugin plugin = pluginRegistry.getPlugin(language);
-            return ResponseEntity.ok(plugin.getDefaultCompilerOptions());
+            // Call the compiler-aware overload; plugins that don't care will ignore the param
+            return ResponseEntity.ok(plugin.getDefaultCompilerOptions(compiler));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }

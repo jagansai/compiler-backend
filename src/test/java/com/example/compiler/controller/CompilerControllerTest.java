@@ -39,15 +39,19 @@ class CompilerControllerTest {
     @MockBean
     private CompilerService compilerService;
 
+    @MockBean
+    private CompilerPluginRegistry pluginRegistry;
+
+    @MockBean
+    private CompilerPlugin mockPlugin;
+
     @Test
     void testCompileSuccess() throws Exception {
         CompilationRequest request = new CompilationRequest();
         request.setLanguage("java");
         request.setCode("public class Test {}");
         
-        CompilationResponse response = new CompilationResponse();
-        response.setSuccess(true);
-        response.setAssemblyOutput("Assembly output");
+        CompilationResponse response = new CompilationResponse("Assembly output", null, null, true);
         
         when(compilerService.compile(any(CompilationRequest.class))).thenReturn(response);
         
@@ -151,11 +155,10 @@ class CompilerControllerTest {
         CompilationRequest request = new CompilationRequest();
         request.setLanguage("cpp");
         request.setCode("int main() { return 0; }");
-        request.setCompiler("g++");
+        request.setCompilerId("g++");
         request.setCompilerOptions("-O2");
         
-        CompilationResponse response = new CompilationResponse();
-        response.setSuccess(true);
+        CompilationResponse response = new CompilationResponse(null, null, null, true);
         
         when(compilerService.compile(any(CompilationRequest.class))).thenReturn(response);
         
