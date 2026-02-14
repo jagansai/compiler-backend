@@ -1,6 +1,14 @@
 # Compiled class files
 *.class
 
+# Compiler artifacts
+*.obj
+*.exe
+*.asm
+*.pyc
+__pycache__/
+*.o
+
 # Build directories
 target/
 build/

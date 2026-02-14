@@ -1,0 +1,7 @@
+def main():
+    numbers = [1, 2, 3, 4, 5]
+    for num in numbers:
+        print(f"Number: {num}")
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,82 @@
+{
+  "languages": [
+    {
+      "id": "java",
+      "name": "Java",
+      "fileExtension": ".java",
+      "allowCustomArgs": false,
+      "editorLanguage": "java",
+      "defaultCodePath": "default-code/java.txt",
+      "compilers": [
+        {
+          "id": "java24",
+          "name": "Java 24",
+          "path": "${compiler.java.jdk24.path}",
+          "version": "24",
+          "default": true,
+          "defaultArgs": ""
+        },
+        {
+          "id": "java17",
+          "name": "Java 17",
+          "path": "${compiler.java.jdk17.path}",
+          "version": "17",
+          "default": false,
+          "defaultArgs": ""
+        }
+      ]
+    },
+    {
+      "id": "cpp",
+      "name": "C++",
+      "fileExtension": ".cpp",
+      "allowCustomArgs": true,
+      "editorLanguage": "cpp",
+      "defaultCodePath": "default-code/cpp.txt",
+      "compilers": [
+        {
+          "id": "msvc",
+          "name": "MSVC 2022",
+          "path": "cl",
+          "version": "19.x",
+          "default": true,
+          "defaultArgs": "/O2"
+        },
+        {
+          "id": "gcc",
+          "name": "GCC",
+          "path": "g++",
+          "version": "13.x",
+          "default": false,
+          "defaultArgs": "-O2"
+        }
+      ]
+    },
+    {
+      "id": "python",
+      "name": "Python",
+      "fileExtension": ".py",
+      "allowCustomArgs": false,
+      "editorLanguage": "python",
+      "defaultCodePath": "default-code/python.txt",
+      "compilers": [
+        {
+          "id": "python314",
+          "name": "Python 3.14",
+          "path": "${compiler.python.314.path}",
+          "version": "3.14",
+          "default": true,
+          "defaultArgs": ""
+        },
+        {
+          "id": "python313",
+          "name": "Python 3.13",
+          "path": "${compiler.python.313.path}",
+          "version": "3.13",
+          "default": false,
+          "defaultArgs": ""
+        }
+      ]
+    }
+  ]
+}
